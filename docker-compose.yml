@@ -1,0 +1,31 @@
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/filestore
+      REDIS_URL: redis://redis:6379/0
+      MINIO_HOST: minio:9000
+      MINIO_USER: minioadmin
+      MINIO_PASS: minioadmin
+      JWT_SECRET: change-me-in-real-life
+    depends_on: [db, redis, minio]
+
+  db:                      # file metadata + users + ownership
+    image: postgres:16
+    environment: {POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: filestore}
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  redis:                   # cache
+    image: redis:7
+
+  minio:                   # actual file bytes (S3-compatible)
+    image: cgr.dev/chainguard/minio:latest
+    command: server /data --console-address ":9001"
+    environment: {MINIO_ROOT_USER: minioadmin, MINIO_ROOT_PASSWORD: minioadmin}
+    ports: ["9001:9001"]   # web console
+    volumes: [miniodata:/data]
+
+volumes:
+  pgdata:
+  miniodata:
